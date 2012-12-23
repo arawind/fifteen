@@ -1,8 +1,20 @@
 #include<stdio.h>
 #include<stdlib.h>
+#include<stdbool.h>
+typedef struct {
+    int x,y;
+}vector;
+typedef struct{
+    int n,w,s,e;
+    vector vn,vw,vs,ve,vm;
+}neighbours;
 void printTable(int **, int);
 void init(int **, int);
-main(){
+void play(int **, int);
+void move(int **, int, vector, vector);
+vector position(int **, int, int);
+neighbours getNeighbours(int **, int, int); 
+void main(){
     int n;
     int **a; 
     //get n
@@ -10,6 +22,7 @@ main(){
     a =(int **) malloc(n*sizeof(int));
     init(a,n);
     printTable(a,n);
+    play(a,n); 
 }
 void init(int **a, int n){
     int i,j,k;
@@ -31,3 +44,130 @@ void printTable(int **a,int n){
         printf("\n");
     }
 }
+void play(int **a, int n){
+    int input=1,scanCheck=1;
+    bool check;
+    vector v1;
+    neighbours zero;
+    while(scanCheck!=EOF){
+        scanCheck = scanf("%d",&input);
+       
+        if(scanCheck==EOF){
+            exit(0);
+        }
+         if(scanCheck){
+            //printf("Enter valid value\n");
+            //scanCheck=1;
+           // continue;
+        
+        check=true;
+        //zpos=position(a,n,0);
+        //inpos=position(a,n,input);
+        zero = getNeighbours(a,n,0);    
+        printf("%d %d %d %d \n",zero.n,zero.e,zero.w,zero.s);
+        if(zero.n==input){
+            //north
+            v1=zero.vn;
+        }
+        else if(zero.w==input){
+            //west
+            v1=zero.vw;
+        }
+        else if(zero.s==input){
+            //south
+            v1=zero.vs;
+        }
+        else if(zero.e==input){
+            //east
+            v1=zero.ve;
+        }
+        else{
+            check=false;
+            printf("Cannot move %d\n",input);
+        }
+        if(check)
+        {
+            move(a,n,v1,zero.vm);
+            printTable(a,n);
+        }
+         }
+    }
+}
+void move(int **a, int n, vector v1, vector v2){
+    int i1,j1,i2,j2;
+    //v1 is zero's position
+    i1=v1.x;
+    j1=v1.y;
+    i2=v2.x;
+    j2=v2.y;
+    a[i2][j2]=a[i1][j1];
+    a[i1][j1]=0;
+}
+vector position(int **a, int n, int what){
+    vector where;
+    int i,j;
+    bool brk=false;
+    for(i=0;i<n;i++){
+        for(j=0;j<n;j++){
+            if(a[i][j]==what){
+                where.x=i;
+                where.y=j;
+                brk=true;
+                break;
+            }
+        }
+        if(brk)
+            break;
+    }
+    return where;
+}
+neighbours getNeighbours(int **a, int n, int what){
+    neighbours n1;
+    vector zero;
+    zero = position(a,n,what);
+    n1.vm.x = zero.x;
+    n1.vm.y = zero.y;
+    if(zero.y - 1>=0){
+        n1.e = a[zero.x][zero.y -1];
+        n1.ve.x = zero.x;
+        n1.ve.y = zero.y -1;
+    }
+    else{
+        n1.e=-1;
+        n1.ve.x=-1;
+        n1.ve.y=-1;
+    }
+    if(zero.y + 1 <n){
+        n1.w = a[zero.x][zero.y +1];
+        n1.vw.x = zero.x;
+        n1.vw.y = zero.y +1;
+    }
+    else{
+        n1.w = -1;
+        n1.vw.x = -1;
+        n1.vw.y = -1;
+    }
+    if(zero.x -1 >=0){
+        n1.n = a[zero.x -1][zero.y];
+        n1.vn.x = zero.x -1;
+        n1.vn.y = zero.y;
+    }
+    else{
+        n1.n = -1;
+        n1.vn.x = -1;
+        n1.vn.y = -1;
+    }
+    if(zero.x +1 <n){
+        n1.s = a[zero.x +1][zero.y];
+        n1.vs.x = zero.x +1;
+        n1.vs.y = zero.y;
+    }
+    else{
+        n1.s = -1;
+        n1.vs.x = -1;
+        n1.vs.y = -1;
+    }
+    
+    return n1;
+}
+
