@@ -1,6 +1,7 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<stdbool.h>
+#include<time.h>
 typedef struct {
     int x,y;
 }vector;
@@ -12,8 +13,10 @@ void printTable(int **, int);
 void init(int **, int);
 void play(int **, int);
 void move(int **, int, vector, vector);
+void shuffle(int **, int, int);
 vector position(int **, int, int);
 neighbours getNeighbours(int **, int, int); 
+int checkSol(int **, int);
 void main(){
     int n;
     int **a; 
@@ -21,6 +24,7 @@ void main(){
     n=4;
     a =(int **) malloc(n*sizeof(int));
     init(a,n);
+    shuffle(a,n,500);
     printTable(a,n);
     play(a,n); 
 }
@@ -64,7 +68,7 @@ void play(int **a, int n){
         //zpos=position(a,n,0);
         //inpos=position(a,n,input);
         zero = getNeighbours(a,n,0);    
-        printf("%d %d %d %d \n",zero.n,zero.e,zero.w,zero.s);
+//        printf("%d %d %d %d \n",zero.n,zero.e,zero.w,zero.s);
         if(zero.n==input){
             //north
             v1=zero.vn;
@@ -89,13 +93,17 @@ void play(int **a, int n){
         {
             move(a,n,v1,zero.vm);
             printTable(a,n);
+            if(checkSol(a,n)){
+                printf("\nYou win!");
+                exit(0);
+            }
         }
          }
     }
 }
 void move(int **a, int n, vector v1, vector v2){
     int i1,j1,i2,j2;
-    //v1 is zero's position
+    //v2 is zero's position
     i1=v1.x;
     j1=v1.y;
     i2=v2.x;
@@ -170,4 +178,69 @@ neighbours getNeighbours(int **a, int n, int what){
     
     return n1;
 }
+void shuffle(int **a, int n, int times){
+    int i,last;
+    vector pos;
+    neighbours zero;
+    last = 0;
+    srand(time(NULL));
+    vector randPos(neighbours z, int last){
+        int rand1;
+        rand1=rand()%4 + 1;
+        switch(rand1){
+            case 1:
+                if(z.n!=last&&z.n!=-1)
+                    return z.vn;
+                else
+                    return randPos(z,last);
+                break;
+            case 2:
+                if(z.e!=last&&z.e!=-1)
+                    return z.ve;
+                else
+                    return randPos(z,last);
+                break;
+            case 3:
+                if(z.w!=last&&z.w!=-1)
+                    return z.vw;
+                else
+                    return randPos(z,last);
+                break;
+            case 4:
+                if(z.s!=last&&z.s!=-1)
+                    return z.vs;
+                else
+                    return randPos(z,last);
+            default:
+                return randPos(z,last);        
+        }
 
+    }
+    for(i=0;i<times;i++){
+        zero = getNeighbours(a, n, 0);
+        pos = randPos(zero,last);        
+        if(pos.x==zero.vn.x && pos.y == zero.vn.y)
+            last=zero.n;
+        else if(pos.x==zero.ve.x && pos.y==zero.ve.y)
+            last=zero.e;
+        else if(pos.x==zero.vw.x && pos.y==zero.vw.y)
+            last=zero.w;
+        else if(pos.x==zero.vs.x && pos.y == zero.vs.y)
+            last=zero.s;
+        move(a, n, pos, zero.vm);
+    }
+    
+}
+int checkSol(int **a, int n){
+    int i,j,k;
+    k=1;
+    for(i=0;i<n;i++){
+        for(j=0;j<n;j++){
+            if(a[i][j]!=k)
+                return 0;
+            else
+                k = (k+1)%(n*n);
+        }
+    }
+    return 1;
+}
