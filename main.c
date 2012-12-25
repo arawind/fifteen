@@ -52,7 +52,9 @@ void play(int **a, int n){
     int input=1,scanCheck=1,i,moves=0;
     bool check;
     vector v1,v2;
+    time_t start,end;
     neighbours zero;
+    start = time(NULL);
     while(scanCheck!=EOF){
         scanCheck = scanf("%d",&input);
        
@@ -131,7 +133,10 @@ void play(int **a, int n){
             moves++;
             printTable(a,n);
             if(checkSol(a,n)){
+                end = time(NULL);
                 printf("\nYou win!\n");
+                printf("Moves: %d\n",moves);
+                printf("Time: %2d:%2d\n",(end-start)/60,(end-start)%60);
                 exit(0);
             }
         }
