@@ -49,9 +49,9 @@ void printTable(int **a,int n){
     }
 }
 void play(int **a, int n){
-    int input=1,scanCheck=1;
+    int input=1,scanCheck=1,i,moves=0;
     bool check;
-    vector v1;
+    vector v1,v2;
     neighbours zero;
     while(scanCheck!=EOF){
         scanCheck = scanf("%d",&input);
@@ -67,7 +67,8 @@ void play(int **a, int n){
         check=true;
         //zpos=position(a,n,0);
         //inpos=position(a,n,input);
-        zero = getNeighbours(a,n,0);    
+        zero = getNeighbours(a,n,0);
+
 //        printf("%d %d %d %d \n",zero.n,zero.e,zero.w,zero.s);
         if(zero.n==input){
             //north
@@ -87,18 +88,59 @@ void play(int **a, int n){
         }
         else{
             check=false;
-            printf("Cannot move %d\n",input);
+            v1 = position(a,n,input);
+            vector getV2(neighbours zero, int *i, vector v1){
+                vector v2;
+                if(v1.x == zero.vm.x){
+                    if(v1.y<zero.vm.y)
+                        v2 = zero.vw; //north
+                    if(v1.y>zero.vm.y)
+                        v2 = zero.ve; //south
+                    *i = v1.y-zero.vm.y;
+                    *i = (*i>0)?(*i):-(*i);
+                }
+           
+                else if(v1.y == zero.vm.y){
+                    if(v1.x<zero.vm.x)
+                        v2 = zero.vn; //east
+                    if(v1.x>zero.vm.x)
+                        v2 = zero.vs; //west
+                    *i = v1.x - zero.vm.x;
+                    *i = (*i>0)?(*i):-(*i);
+
+                }
+                return v2;
+            }
+            v2=getV2(zero, &i, v1);
+            if(i){
+                while(i!=1){
+                    //printf("%d\n",i);
+                    move(a,n,v2,zero.vm);
+                    zero = getNeighbours(a,n,0);
+                    v2=getV2(zero, &i, v1);
+                    //printTable(a,n);
+                    //i--;
+                }
+                check=true;
+            }
+
         }
         if(check)
         {
             move(a,n,v1,zero.vm);
+            moves++;
             printTable(a,n);
             if(checkSol(a,n)){
-                printf("\nYou win!");
+                printf("\nYou win!\n");
                 exit(0);
             }
         }
+        else
+        {
+            printf("Cannot move %d\n",input);
+        }
          }
+
     }
 }
 void move(int **a, int n, vector v1, vector v2){
@@ -136,24 +178,24 @@ neighbours getNeighbours(int **a, int n, int what){
     n1.vm.x = zero.x;
     n1.vm.y = zero.y;
     if(zero.y - 1>=0){
-        n1.e = a[zero.x][zero.y -1];
-        n1.ve.x = zero.x;
-        n1.ve.y = zero.y -1;
+        n1.w = a[zero.x][zero.y -1];
+        n1.vw.x = zero.x;
+        n1.vw.y = zero.y -1;
     }
     else{
-        n1.e=-1;
-        n1.ve.x=-1;
-        n1.ve.y=-1;
+        n1.w=-1;
+        n1.vw.x=-1;
+        n1.vw.y=-1;
     }
     if(zero.y + 1 <n){
-        n1.w = a[zero.x][zero.y +1];
-        n1.vw.x = zero.x;
-        n1.vw.y = zero.y +1;
+        n1.e = a[zero.x][zero.y +1];
+        n1.ve.x = zero.x;
+        n1.ve.y = zero.y +1;
     }
     else{
-        n1.w = -1;
-        n1.vw.x = -1;
-        n1.vw.y = -1;
+        n1.e = -1;
+        n1.ve.x = -1;
+        n1.ve.y = -1;
     }
     if(zero.x -1 >=0){
         n1.n = a[zero.x -1][zero.y];
