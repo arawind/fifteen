@@ -2,6 +2,7 @@
 #include<stdlib.h>
 #include<stdbool.h>
 #include<time.h>
+#include<ncurses.h>
 typedef struct {
     int x,y;
 }vector;
@@ -9,24 +10,39 @@ typedef struct{
     int n,w,s,e;
     vector vn,vw,vs,ve,vm;
 }neighbours;
-void printTable(int **, int);
+void printTable(int **, int, WINDOW *, vector );
 void init(int **, int);
-void play(int **, int);
-void move(int **, int, vector, vector);
+void play(int **, int, WINDOW *, WINDOW *);
+void swap(int **, int, vector, vector);
 void shuffle(int **, int, int);
 vector position(int **, int, int);
 neighbours getNeighbours(int **, int, int); 
-int checkSol(int **, int);
+vector getInput(int **, int, WINDOW *, vector);
+int checkSol(int **, int); 
 void main(){
     int n;
     int **a; 
+    WINDOW *board, *notice;
+    initscr();
+    noecho();
+    cbreak();
+    raw();
+    curs_set(0);
     //get n
     n=4;
     a =(int **) malloc(n*sizeof(int));
     init(a,n);
+    board = newwin(n*2+1, n*4+2, 3,10);
+    keypad(board, TRUE);
+    wrefresh(board);
+    box(board,0,0);
+    
+    notice = newwin(2, 40, n*2+5, 10);
+//    box(notice,0,0);
+    wrefresh(notice);
     shuffle(a,n,500);
-    printTable(a,n);
-    play(a,n); 
+//    printTable(a,n,board);
+    play(a,n,board,notice); 
 }
 void init(int **a, int n){
     int i,j,k;
@@ -39,29 +55,47 @@ void init(int **a, int n){
         }
     }
 }
-void printTable(int **a,int n){
+void printTable(int **a,int n, WINDOW *board,vector h){
     int i,j;
     for(i=0;i<n;i++){
         for(j=0;j<n;j++){
-            printf("\t%2d",a[i][j]);    
+            if(h.x==i && h.y==j){
+                wattron(board,A_REVERSE);
+                mvwprintw(board,i*2 +1 ,j*4+2,"%2d",a[i][j]);
+                wattroff(board,A_REVERSE);
+            }
+            else{
+              mvwprintw(board,i*2 +1 ,j*4+2,"%2d",a[i][j]);
+            }
         }
-        printf("\n");
-    }
+       // printf("\n");
+    } 
+    wrefresh(board);
 }
-void play(int **a, int n){
+void play(int **a, int n, WINDOW *board, WINDOW *notice){
     int input=1,scanCheck=1,i,moves=0;
-    bool check;
+    bool check,kill=false;
     vector v1,v2;
     time_t start,end;
     neighbours zero;
+    zero = getNeighbours(a,n,0);
+    printTable(a,n,board,zero.vm); 
+    mvwprintw(notice,0,0,"Press F3 to quit");
+    mvwprintw(notice,1,0,"Moves: %d",moves);
+    wrefresh(notice);
+    v1.x = -1;
+    v1.y = -1;
     start = time(NULL);
-    while(scanCheck!=EOF){
-        scanCheck = scanf("%d",&input);
-       
-        if(scanCheck==EOF){
+    while(!kill){
+        v1 = getInput(a,n,board,v1);
+//        scanCheck = wscanw("%d",&input);
+//        scanCheck = wgetch(board);     
+//        mvprintw(0,0,"ABC %d ",scanCheck);
+       /* if(scanCheck==KEY_F(3)){
+            endwin();
             exit(0);
-        }
-         if(scanCheck){
+        }*/
+         if(v1.x!=-1){
             //printf("Enter valid value\n");
             //scanCheck=1;
            // continue;
@@ -70,9 +104,12 @@ void play(int **a, int n){
         //zpos=position(a,n,0);
         //inpos=position(a,n,input);
         zero = getNeighbours(a,n,0);
-
+        if((zero.vn.x==v1.x && zero.vn.y==v1.y) || (zero.vs.x==v1.x && zero.vs.y==v1.y) || (zero.ve.x==v1.x && zero.ve.y==v1.y) || (zero.vw.x==v1.x && zero.vw.y==v1.y))
+        {
+           // mvprintw(0,0,"Zero: %d %d : V1: %d %d ",zero.vm.x,zero.vm.y, v1.x, v1.y);
+        }
 //        printf("%d %d %d %d \n",zero.n,zero.e,zero.w,zero.s);
-        if(zero.n==input){
+      /*  if(zero.n==input){
             //north
             v1=zero.vn;
         }
@@ -87,12 +124,14 @@ void play(int **a, int n){
         else if(zero.e==input){
             //east
             v1=zero.ve;
-        }
+        }*/
         else{
             check=false;
-            v1 = position(a,n,input);
+           // v1 = position(a,n,input);
             vector getV2(neighbours zero, int *i, vector v1){
                 vector v2;
+                v2.x =-1;
+                v2.y = -1;
                 if(v1.x == zero.vm.x){
                     if(v1.y<zero.vm.y)
                         v2 = zero.vw; //north
@@ -114,10 +153,10 @@ void play(int **a, int n){
                 return v2;
             }
             v2=getV2(zero, &i, v1);
-            if(i){
+            if(i&& (v2.x!=-1)){
                 while(i!=1){
                     //printf("%d\n",i);
-                    move(a,n,v2,zero.vm);
+                    swap(a,n,v2,zero.vm);
                     zero = getNeighbours(a,n,0);
                     v2=getV2(zero, &i, v1);
                     //printTable(a,n);
@@ -129,26 +168,33 @@ void play(int **a, int n){
         }
         if(check)
         {
-            move(a,n,v1,zero.vm);
+            swap(a,n,v1,zero.vm);
             moves++;
-            printTable(a,n);
+            mvwprintw(notice,1,0,"Moves: %d", moves);
+            wrefresh(notice);
+//            zero = getNeighbours(a,n,0);
+            printTable(a,n,board,v1);
             if(checkSol(a,n)){
                 end = time(NULL);
-                printf("\nYou win!\n");
-                printf("Moves: %d\n",moves);
-                printf("Time: %2d:%2d\n",(end-start)/60,(end-start)%60);
+                mvwprintw(notice,0,0,"You win! Moves: %d",moves);
+                mvwprintw(notice,1,0,"Time: %2d:%2d ", (end-start)/60, (end-start)%60);
+                wrefresh(notice);
+//                printf("Moves: %d\n",moves);
+//                printf("Time: %2d:%2d\n",(end-start)/60,(end-start)%60);
+                wgetch(board);
+                endwin();
                 exit(0);
             }
         }
         else
         {
-            printf("Cannot move %d\n",input);
+//            printf("Cannot move %d\n",input);
         }
          }
 
     }
 }
-void move(int **a, int n, vector v1, vector v2){
+void swap(int **a, int n, vector v1, vector v2){
     int i1,j1,i2,j2;
     //v2 is zero's position
     i1=v1.x;
@@ -274,9 +320,8 @@ void shuffle(int **a, int n, int times){
             last=zero.w;
         else if(pos.x==zero.vs.x && pos.y == zero.vs.y)
             last=zero.s;
-        move(a, n, pos, zero.vm);
+        swap(a, n, pos, zero.vm);
     }
-    
 }
 int checkSol(int **a, int n){
     int i,j,k;
@@ -290,4 +335,53 @@ int checkSol(int **a, int n){
         }
     }
     return 1;
+}
+vector getInput(int **a, int n,WINDOW * board, vector last){
+    int ch;
+    vector v,h;
+    v.x=-1;
+    v.y=-1;
+    if(last.x==-1){
+        h = position(a,n,0);
+       // x = h.x;
+       // y = h.y;
+    }
+    else{
+        h.x = last.x;
+        h.y = last.y;
+    }
+    printTable(a,n,board,h);
+    while(1){
+        ch = wgetch(board);
+        if(ch==KEY_F(3)){
+            endwin();
+            exit(0);
+        }
+       // h.x = x;
+       // h.y = y;
+        switch(ch){
+            case KEY_UP:
+                h.x =  ((h.x-1)>=0)? h.x-1:h.x;
+                break;
+            case KEY_DOWN:
+                h.x = ((h.x+1)<n)? h.x+1:h.x;
+                break;
+            case KEY_LEFT:
+                h.y = ((h.y-1)>=0) ? h.y-1:h.y;
+                break;
+            case KEY_RIGHT:
+                h.y = ((h.y+1)<n) ? h.y+1:h.y;
+                break;
+            case ' ':
+            case 10:
+                v.x = h.x;
+                v.y = h.y;
+                return v;
+                break;
+        }
+       // h.x = x;
+       // h.y = y;
+        printTable(a,n,board,h);
+    }
+    return v;
 }
